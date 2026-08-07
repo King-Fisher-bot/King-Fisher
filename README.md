@@ -7,7 +7,7 @@
 `bot.py` ফাইল খুলে:
 
 ```python
-BOT_TOKEN = "8756561564:AAGEmLDO3lT3y41cRJPzlUNinSWq6w5MgaY"
+BOT_TOKEN = "MMy Bot Token"
 ```
 
 এর জায়গায় BotFather থেকে পাওয়া Token বসাবেন।
