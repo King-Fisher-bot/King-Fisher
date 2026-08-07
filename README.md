@@ -1,23 +1,30 @@
-# King Fisher Bot — Fixed Webhook Version
+# King Fisher Bot - Real Device Data Integration
 
-This version does NOT delete the Telegram webhook when Render shuts down or spins down the free service.
+## Features
+- Real-time SMS monitoring from Android devices
+- Real-time Call log monitoring from Android devices
+- Secure webhook-based communication
+- Telegram bot interface
+- Multi-device support
 
-## Environment Variables
+## Architecture
+1. **Android Device**: Runs `android_sender.py` via Termux
+2. **Telegram Bot**: FastAPI server with webhook
+3. **Communication**: HTTPS with secret token authentication
 
-BOT_TOKEN = your BotFather token
-PUBLIC_URL = your current Render URL
-WEBHOOK_SECRET = your own secret
+## Setup
 
-Example:
+### 1. Telegram Bot
+1. Create bot via @BotFather
+2. Set environment variables:
+   - `BOT_TOKEN`: Your bot token
+   - `PUBLIC_URL`: Your Render/Heroku URL
+   - `WEBHOOK_SECRET`: Random secret string
 
-PUBLIC_URL=https://king-fisher-0g8k.onrender.com
-
-## Build Command
-
-pip install -r requirements.txt
-
-## Start Command
-
-uvicorn bot:app --host 0.0.0.0 --port $PORT
-
-Token is intentionally not included in this repository.
+### 2. Android Device
+1. Install Termux (F-Droid version)
+2. Install required packages:
+   ```bash
+   pkg update && pkg upgrade
+   pkg install python termux-api termux-tools
+   pip install requests
