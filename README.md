@@ -1,10 +1,16 @@
-# King Fisher Bot — Premium UI
+# King Fisher Bot — Fixed Webhook Version
 
-## Render Environment Variables
+This version does NOT delete the Telegram webhook when Render shuts down or spins down the free service.
 
-BOT_TOKEN = BotFather token
-PUBLIC_URL = https://king-fisher.onrender.com
+## Environment Variables
+
+BOT_TOKEN = your BotFather token
+PUBLIC_URL = your current Render URL
 WEBHOOK_SECRET = your own secret
+
+Example:
+
+PUBLIC_URL=https://king-fisher-0g8k.onrender.com
 
 ## Build Command
 
@@ -14,4 +20,4 @@ pip install -r requirements.txt
 
 uvicorn bot:app --host 0.0.0.0 --port $PORT
 
-SMS/Call sections contain fictional demo data only. The bot does not access device SMS, call logs, contacts, or private data.
+Token is intentionally not included in this repository.

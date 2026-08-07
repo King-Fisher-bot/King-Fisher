@@ -1,42 +1,61 @@
 import os
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, Header, HTTPException
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger("KingFisherBot")
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
+
 if not PUBLIC_URL:
     raise RuntimeError("PUBLIC_URL is not set")
 
-tg = Application.builder().token(BOT_TOKEN).updater(None).build()
+telegram_app = Application.builder().token(BOT_TOKEN).updater(None).build()
+
 
 def main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📦  SYSTEM ITEMS", callback_data="items")],
-        [InlineKeyboardButton("🔄  RESTART", callback_data="restart"),
-         InlineKeyboardButton("🔒  CLOSE", callback_data="close")],
-        [InlineKeyboardButton("❓  HELP", callback_data="help"),
-         InlineKeyboardButton("ℹ️  ABOUT", callback_data="about")]
+        [
+            InlineKeyboardButton("🔄  RESTART", callback_data="restart"),
+            InlineKeyboardButton("🔒  CLOSE", callback_data="close"),
+        ],
+        [
+            InlineKeyboardButton("❓  HELP", callback_data="help"),
+            InlineKeyboardButton("ℹ️  ABOUT", callback_data="about"),
+        ],
     ])
+
 
 def items_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📩  SMS INBOX", callback_data="sms"),
-         InlineKeyboardButton("📞  CALL LIST", callback_data="call")],
+        [
+            InlineKeyboardButton("📩  SMS INBOX", callback_data="sms"),
+            InlineKeyboardButton("📞  CALL LIST", callback_data="call"),
+        ],
         [InlineKeyboardButton("📊  SYSTEM STATUS", callback_data="status")],
+        [InlineKeyboardButton("🔙  BACK TO MAIN", callback_data="back")],
+    ])
+
+
+def back_menu():
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔙  BACK TO MAIN", callback_data="back")]
     ])
 
-def back_menu():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("🔙  BACK TO MAIN", callback_data="back")]])
 
 OPENING = """<b>╔════════════════════════════╗
    👑 KING FISHER SYSTEM
@@ -129,82 +148,178 @@ Outgoing • 01:36
 ━━━━━━━━━━━━━━━━━━
 ⚠️ <i>Fictional demo call records.</i>"""
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.effective_user.first_name or "User"
-    await update.message.reply_text(OPENING.format(name=name), parse_mode=ParseMode.HTML, reply_markup=main_menu())
+    await update.message.reply_text(
+        OPENING.format(name=name),
+        parse_mode=ParseMode.HTML,
+        reply_markup=main_menu(),
+    )
+
 
 async def items(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a demo section:</i>", parse_mode=ParseMode.HTML, reply_markup=items_menu())
+    await update.message.reply_text(
+        "<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a demo section:</i>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=items_menu(),
+    )
+
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("<b>🔄 SYSTEM RESTARTED</b>\n\n━━━━━━━━━━━━━━━━━━\n🟢 Interface refreshed\n🟢 Services ready\n🟢 Session active\n━━━━━━━━━━━━━━━━━━", parse_mode=ParseMode.HTML, reply_markup=main_menu())
+    await update.message.reply_text(
+        "<b>🔄 SYSTEM RESTARTED</b>\n\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "🟢 Interface refreshed\n"
+        "🟢 Services ready\n"
+        "🟢 Session active\n"
+        "━━━━━━━━━━━━━━━━━━",
+        parse_mode=ParseMode.HTML,
+        reply_markup=main_menu(),
+    )
+
 
 async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(CLOSING, parse_mode=ParseMode.HTML)
 
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(HELP, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+    await update.message.reply_text(
+        HELP,
+        parse_mode=ParseMode.HTML,
+        reply_markup=back_menu(),
+    )
+
 
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(ABOUT, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+    await update.message.reply_text(
+        ABOUT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=back_menu(),
+    )
+
 
 async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     d = q.data
+
     if d == "items":
-        await q.edit_message_text("<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a demo section:</i>", parse_mode=ParseMode.HTML, reply_markup=items_menu())
+        await q.edit_message_text(
+            "<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a demo section:</i>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=items_menu(),
+        )
     elif d == "sms":
-        await q.edit_message_text(SMS, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+        await q.edit_message_text(
+            SMS, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
     elif d == "call":
-        await q.edit_message_text(CALL, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+        await q.edit_message_text(
+            CALL, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
     elif d == "status":
-        await q.edit_message_text(STATUS, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+        await q.edit_message_text(
+            STATUS, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
     elif d == "restart":
-        await q.edit_message_text("<b>🔄 SYSTEM RESTARTED</b>\n\n━━━━━━━━━━━━━━━━━━\n🟢 Interface refreshed\n🟢 Services ready\n🟢 Session active\n━━━━━━━━━━━━━━━━━━", parse_mode=ParseMode.HTML, reply_markup=main_menu())
+        await q.edit_message_text(
+            "<b>🔄 SYSTEM RESTARTED</b>\n\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🟢 Interface refreshed\n"
+            "🟢 Services ready\n"
+            "🟢 Session active\n"
+            "━━━━━━━━━━━━━━━━━━",
+            parse_mode=ParseMode.HTML,
+            reply_markup=main_menu(),
+        )
     elif d == "close":
         await q.edit_message_text(CLOSING, parse_mode=ParseMode.HTML)
     elif d == "help":
-        await q.edit_message_text(HELP, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+        await q.edit_message_text(
+            HELP, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
     elif d == "about":
-        await q.edit_message_text(ABOUT, parse_mode=ParseMode.HTML, reply_markup=back_menu())
+        await q.edit_message_text(
+            ABOUT, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
     elif d == "back":
         name = q.from_user.first_name or "User"
-        await q.edit_message_text(OPENING.format(name=name), parse_mode=ParseMode.HTML, reply_markup=main_menu())
+        await q.edit_message_text(
+            OPENING.format(name=name),
+            parse_mode=ParseMode.HTML,
+            reply_markup=main_menu(),
+        )
 
-tg.add_handler(CommandHandler("start", start))
-tg.add_handler(CommandHandler("items", items))
-tg.add_handler(CommandHandler("restart", restart))
-tg.add_handler(CommandHandler("close", close))
-tg.add_handler(CommandHandler("help", help_cmd))
-tg.add_handler(CommandHandler("about", about))
-tg.add_handler(CallbackQueryHandler(callbacks))
+
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(CommandHandler("items", items))
+telegram_app.add_handler(CommandHandler("restart", restart))
+telegram_app.add_handler(CommandHandler("close", close))
+telegram_app.add_handler(CommandHandler("help", help_cmd))
+telegram_app.add_handler(CommandHandler("about", about))
+telegram_app.add_handler(CallbackQueryHandler(callbacks))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await tg.initialize()
-    await tg.start()
-    await tg.bot.set_webhook(
-        url=f"{PUBLIC_URL}/telegram/webhook",
-        secret_token=WEBHOOK_SECRET or None,
-        drop_pending_updates=True
-    )
-    logging.info("Webhook configured")
-    yield
-    await tg.bot.delete_webhook()
-    await tg.stop()
-    await tg.shutdown()
+    await telegram_app.initialize()
+    await telegram_app.start()
 
-app = FastAPI(title="King Fisher Bot", version="2.0.0", lifespan=lifespan)
+    webhook_url = f"{PUBLIC_URL}/telegram/webhook"
+
+    await telegram_app.bot.set_webhook(
+        url=webhook_url,
+        secret_token=WEBHOOK_SECRET or None,
+        drop_pending_updates=True,
+    )
+
+    logger.info("Webhook configured: %s", webhook_url)
+
+    # IMPORTANT:
+    # Do NOT call delete_webhook() during shutdown.
+    # Render Free may spin down/restart the service. Telegram's webhook
+    # must remain registered while the service is sleeping.
+    yield
+
+    try:
+        await telegram_app.stop()
+        await telegram_app.shutdown()
+    except Exception:
+        logger.exception("Application shutdown error")
+
+
+app = FastAPI(
+    title="King Fisher Bot",
+    version="2.1.0",
+    lifespan=lifespan,
+)
+
 
 @app.get("/")
 async def home():
-    return {"status": "online", "service": "King Fisher Bot"}
+    return {
+        "status": "online",
+        "service": "King Fisher Bot",
+        "version": "2.1.0",
+    }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy"}
+
 
 @app.post("/telegram/webhook")
-async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
+async def webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+):
     if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
         raise HTTPException(status_code=403, detail="Invalid webhook secret")
-    update = Update.de_json(await request.json(), tg.bot)
-    await tg.process_update(update)
+
+    data = await request.json()
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.process_update(update)
+
     return {"ok": True}
