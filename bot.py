@@ -19,7 +19,6 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
-
 if not PUBLIC_URL:
     raise RuntimeError("PUBLIC_URL is not set")
 
@@ -28,14 +27,14 @@ telegram_app = Application.builder().token(BOT_TOKEN).updater(None).build()
 
 def main_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📦  SYSTEM ITEMS", callback_data="items")],
+        [InlineKeyboardButton("╭━━ 📦 SYSTEM CENTER ━━╮", callback_data="items")],
         [
-            InlineKeyboardButton("🔄  RESTART", callback_data="restart"),
-            InlineKeyboardButton("🔒  CLOSE", callback_data="close"),
+            InlineKeyboardButton("🔄 RESTART", callback_data="restart"),
+            InlineKeyboardButton("🔒 CLOSE", callback_data="close"),
         ],
         [
-            InlineKeyboardButton("❓  HELP", callback_data="help"),
-            InlineKeyboardButton("ℹ️  ABOUT", callback_data="about"),
+            InlineKeyboardButton("❓ HELP", callback_data="help"),
+            InlineKeyboardButton("ℹ️ ABOUT", callback_data="about"),
         ],
     ])
 
@@ -43,110 +42,183 @@ def main_menu():
 def items_menu():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📩  SMS INBOX", callback_data="sms"),
-            InlineKeyboardButton("📞  CALL LIST", callback_data="call"),
+            InlineKeyboardButton("📩 SMS INBOX", callback_data="sms"),
+            InlineKeyboardButton("📞 CALL LIST", callback_data="call"),
         ],
-        [InlineKeyboardButton("📊  SYSTEM STATUS", callback_data="status")],
-        [InlineKeyboardButton("🔙  BACK TO MAIN", callback_data="back")],
+        [InlineKeyboardButton("📊 SYSTEM STATUS", callback_data="status")],
+        [InlineKeyboardButton("🔙 MAIN MENU", callback_data="back")],
     ])
 
 
 def back_menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙  BACK TO MAIN", callback_data="back")]
+        [InlineKeyboardButton("🔙 BACK TO MAIN", callback_data="back")]
     ])
 
 
-OPENING = """<b>╔════════════════════════════╗
-   👑 KING FISHER SYSTEM
-╚════════════════════════════╝</b>
+def restart_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 RESTART AGAIN", callback_data="restart")],
+        [InlineKeyboardButton("🔙 MAIN MENU", callback_data="back")],
+    ])
 
-✨ <b>System initialized successfully</b>
 
-Welcome back, <b>{name}</b>.
+OPENING = """<b>╔════════════════════════════════╗
+║       👑 KING FISHER
+║       PREMIUM SYSTEM
+╚════════════════════════════════╝</b>
 
-🟢 <b>Status:</b> Online
-⚡ <b>Mode:</b> Premium
-🛡️ <b>Security:</b> Protected
+✨ <b>Welcome, {name}</b>
 
-<i>Select an option below to continue.</i>"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 <b>SYSTEM</b>      ONLINE
+⚡ <b>MODE</b>        PREMIUM
+🛡️ <b>SECURITY</b>    PROTECTED
+━━━━━━━━━━━━━━━━━━━━━━━━
 
-CLOSING = """<b>╔════════════════════════════╗
-      🔒 SESSION CLOSED
-╚════════════════════════════╝</b>
+<i>Choose an operation below.</i>"""
 
-Thank you for using <b>King Fisher</b>.
+ITEMS = """<b>╔════════════════════════════════╗
+║       📦 SYSTEM CENTER
+╚════════════════════════════════╝</b>
 
-🟡 <b>Status:</b> Standby
-🔐 <b>Session:</b> Closed
+<i>Available demo modules</i>
 
-<i>Send /start whenever you want to open the system again.</i>"""
+📩 <b>SMS INBOX</b>
+   └─ Demo message center
+
+📞 <b>CALL LIST</b>
+   └─ Demo call activity
+
+📊 <b>SYSTEM STATUS</b>
+   └─ Runtime information
+
+⚠️ <i>All records shown here are fictional demo data.</i>"""
+
+SMS = """<b>📩 SMS INBOX</b>
+<i>Premium Demo Center</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🟢 <b>Demo Bank</b>
+Your demo transaction was successful.
+<code>Today • 10:42 AM</code>
+
+────────────────────────
+
+🔵 <b>King Fisher</b>
+Welcome to the premium demo system.
+<code>Today • 09:18 AM</code>
+
+────────────────────────
+
+🟣 <b>Delivery Demo</b>
+Your demo package is ready.
+<code>Yesterday • 06:35 PM</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ <i>Fictional demo messages only.</i>"""
+
+CALL = """<b>📞 CALL ACTIVITY</b>
+<i>Premium Demo Center</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🟢 <b>Demo Contact</b>
+Incoming Call • <code>02:14</code>
+<code>Today • 11:25 AM</code>
+
+────────────────────────
+
+🔵 <b>Support Demo</b>
+Missed Call • <code>00:48</code>
+<code>Today • 08:10 AM</code>
+
+────────────────────────
+
+🟣 <b>King Fisher</b>
+Outgoing Call • <code>01:36</code>
+<code>Yesterday • 07:42 PM</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ <i>Fictional demo call records only.</i>"""
+
+STATUS = """<b>📊 SYSTEM STATUS</b>
+<i>King Fisher Premium Monitor</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 <b>BOT</b>          ONLINE
+🟢 <b>WEBHOOK</b>      CONNECTED
+🟢 <b>TELEGRAM API</b> READY
+🟢 <b>WEB SERVICE</b> ACTIVE
+🟢 <b>INTERFACE</b>    PREMIUM
+🧪 <b>DATA MODE</b>    DEMO
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+<i>All core services are operational.</i>"""
+
+RESTARTED = """<b>╔════════════════════════════════╗
+║       🔄 SYSTEM RESTART
+╚════════════════════════════════╝</b>
+
+✨ System refresh completed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 Interface       READY
+🟢 Services        READY
+🟢 Webhook         CONNECTED
+🟢 Session         ACTIVE
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+<i>King Fisher is ready for use.</i>"""
+
+CLOSING = """<b>╔════════════════════════════════╗
+║       🔒 SESSION CLOSED
+╚════════════════════════════════╝</b>
+
+Thank you for using
+<b>👑 KING FISHER PREMIUM</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🟡 SYSTEM     STANDBY
+🔐 SESSION    CLOSED
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+<i>Send /start to open the system again.</i>"""
 
 HELP = """<b>❓ KING FISHER — HELP</b>
 
-📦 <b>System Items</b> — demo sections
-🔄 <b>Restart</b> — refresh interface
-🔒 <b>Close</b> — close current interface
-📊 <b>Status</b> — demo system status
+━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️ SMS/Call sections contain fictional demo data only.
-This bot does not read device SMS, call logs, contacts, or private data."""
+📦 <b>System Center</b>
+Open the demo modules.
+
+🔄 <b>Restart</b>
+Refresh the current system interface.
+
+🔒 <b>Close</b>
+Close the current session screen.
+
+📊 <b>System Status</b>
+View demo runtime information.
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ <i>SMS and Call sections contain fictional demo data.
+They do not access device messages, calls, contacts, or private data.</i>"""
 
 ABOUT = """<b>ℹ️ ABOUT KING FISHER</b>
 
-👑 <b>King Fisher Bot</b>
-Premium Telegram interface demo.
+👑 <b>King Fisher Premium Bot</b>
 
-━━━━━━━━━━━━━━━━━━
-🟢 Webhook: Active
-🟢 Runtime: Python
-🟢 Interface: Premium
-🧪 Data: Demo only
-━━━━━━━━━━━━━━━━━━"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️ Runtime       Python
+🌐 Web Service   FastAPI
+🔗 Webhook       Active
+🎨 Interface     Premium
+🧪 Data          Demo
+━━━━━━━━━━━━━━━━━━━━━━━━
 
-STATUS = """<b>📊 SYSTEM STATUS</b>
-
-━━━━━━━━━━━━━━━━━━
-🟢 <b>Bot:</b> Online
-🟢 <b>Webhook:</b> Connected
-🟢 <b>API:</b> Ready
-🟢 <b>Interface:</b> Premium
-🧪 <b>Data:</b> Demo
-━━━━━━━━━━━━━━━━━━"""
-
-SMS = """<b>📩 SMS INBOX — DEMO</b>
-
-━━━━━━━━━━━━━━━━━━
-<b>1.</b> 🟢 <b>Demo Bank</b>
-Your demo transaction was successful.
-<i>Today • 10:42 AM</i>
-
-<b>2.</b> 🔵 <b>King Fisher</b>
-Welcome to the premium demo system.
-<i>Today • 09:18 AM</i>
-
-<b>3.</b> 🟣 <b>Delivery Demo</b>
-Your demo package is ready for delivery.
-<i>Yesterday • 06:35 PM</i>
-━━━━━━━━━━━━━━━━━━
-⚠️ <i>Fictional demo messages.</i>"""
-
-CALL = """<b>📞 CALL LIST — DEMO</b>
-
-━━━━━━━━━━━━━━━━━━
-<b>1.</b> 🟢 <b>Demo Contact</b>
-Incoming • 02:14
-<i>Today • 11:25 AM</i>
-
-<b>2.</b> 🔵 <b>Support Demo</b>
-Missed • 00:48
-<i>Today • 08:10 AM</i>
-
-<b>3.</b> 🟣 <b>King Fisher</b>
-Outgoing • 01:36
-<i>Yesterday • 07:42 PM</i>
-━━━━━━━━━━━━━━━━━━
-⚠️ <i>Fictional demo call records.</i>"""
+<i>Designed as a premium Telegram bot interface.</i>"""
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -160,7 +232,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def items(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a demo section:</i>",
+        ITEMS,
         parse_mode=ParseMode.HTML,
         reply_markup=items_menu(),
     )
@@ -168,14 +240,9 @@ async def items(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "<b>🔄 SYSTEM RESTARTED</b>\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "🟢 Interface refreshed\n"
-        "🟢 Services ready\n"
-        "🟢 Session active\n"
-        "━━━━━━━━━━━━━━━━━━",
+        RESTARTED,
         parse_mode=ParseMode.HTML,
-        reply_markup=main_menu(),
+        reply_markup=restart_menu(),
     )
 
 
@@ -185,17 +252,13 @@ async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        HELP,
-        parse_mode=ParseMode.HTML,
-        reply_markup=back_menu(),
+        HELP, parse_mode=ParseMode.HTML, reply_markup=back_menu()
     )
 
 
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        ABOUT,
-        parse_mode=ParseMode.HTML,
-        reply_markup=back_menu(),
+        ABOUT, parse_mode=ParseMode.HTML, reply_markup=back_menu()
     )
 
 
@@ -206,9 +269,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if d == "items":
         await q.edit_message_text(
-            "<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a demo section:</i>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=items_menu(),
+            ITEMS, parse_mode=ParseMode.HTML, reply_markup=items_menu()
         )
     elif d == "sms":
         await q.edit_message_text(
@@ -224,14 +285,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     elif d == "restart":
         await q.edit_message_text(
-            "<b>🔄 SYSTEM RESTARTED</b>\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🟢 Interface refreshed\n"
-            "🟢 Services ready\n"
-            "🟢 Session active\n"
-            "━━━━━━━━━━━━━━━━━━",
-            parse_mode=ParseMode.HTML,
-            reply_markup=main_menu(),
+            RESTARTED, parse_mode=ParseMode.HTML, reply_markup=restart_menu()
         )
     elif d == "close":
         await q.edit_message_text(CLOSING, parse_mode=ParseMode.HTML)
@@ -276,10 +330,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Webhook configured: %s", webhook_url)
 
-    # IMPORTANT:
-    # Do NOT call delete_webhook() during shutdown.
-    # Render Free may spin down/restart the service. Telegram's webhook
-    # must remain registered while the service is sleeping.
+    # Do not delete the webhook during Render shutdown/spin-down.
     yield
 
     try:
@@ -290,8 +341,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="King Fisher Bot",
-    version="2.1.0",
+    title="King Fisher Premium Bot",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -300,8 +351,8 @@ app = FastAPI(
 async def home():
     return {
         "status": "online",
-        "service": "King Fisher Bot",
-        "version": "2.1.0",
+        "service": "King Fisher Premium Bot",
+        "version": "3.0.0",
     }
 
 
