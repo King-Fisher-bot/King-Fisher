@@ -1,31 +1,17 @@
-# King Fisher Bot — Webhook Version
+# King Fisher Bot — Premium UI
 
-BotFather Token GitHub-এ রাখা হবে না।
+## Render Environment Variables
 
-Environment Variables:
-- BOT_TOKEN = BotFather-এর নতুন Token
-- PUBLIC_URL = deploy হওয়ার পর HTTPS service URL
-- WEBHOOK_SECRET = একটি নিজের secret text
+BOT_TOKEN = BotFather token
+PUBLIC_URL = https://king-fisher.onrender.com
+WEBHOOK_SECRET = your own secret
 
-Build Command:
-```bash
+## Build Command
+
 pip install -r requirements.txt
-```
 
-Start Command:
-```bash
+## Start Command
+
 uvicorn bot:app --host 0.0.0.0 --port $PORT
-```
 
-Features:
-- /start
-- /items
-- /restart
-- /close
-- /help
-- /about
-- Inline menu
-- SMS placeholder
-- CALL placeholder
-
-SMS/Call অংশে ব্যক্তিগত তথ্য সংগ্রহ বা দেখানোর ব্যবস্থা নেই।
+SMS/Call sections contain fictional demo data only. The bot does not access device SMS, call logs, contacts, or private data.
