@@ -1,33 +1,31 @@
-# KingFisher_Bot
+# King Fisher Bot — Webhook Version
 
-এটি একটি Telegram bot starter project।
+BotFather Token GitHub-এ রাখা হবে না।
 
-## 1. Token বসানো
+Environment Variables:
+- BOT_TOKEN = BotFather-এর নতুন Token
+- PUBLIC_URL = deploy হওয়ার পর HTTPS service URL
+- WEBHOOK_SECRET = একটি নিজের secret text
 
-`bot.py` ফাইল খুলে:
-
-```python
-BOT_TOKEN = "MMy Bot Token"
-```
-
-এর জায়গায় BotFather থেকে পাওয়া Token বসাবেন।
-
-## 2. Install
-
+Build Command:
 ```bash
 pip install -r requirements.txt
 ```
 
-## 3. Run
-
+Start Command:
 ```bash
-python bot.py
+uvicorn bot:app --host 0.0.0.0 --port $PORT
 ```
 
-তারপর Telegram-এ `@King_FisherBot` খুলে `/start` পাঠান।
+Features:
+- /start
+- /items
+- /restart
+- /close
+- /help
+- /about
+- Inline menu
+- SMS placeholder
+- CALL placeholder
 
-## গুরুত্বপূর্ণ
-
-- BotFather-এর Token কাউকে প্রকাশ করবেন না।
-- SMS/Call ফিচার এখানে শুধু UI placeholder হিসেবে আছে।
-- অন্যের SMS, call log বা ব্যক্তিগত তথ্য সংগ্রহ/দেখানোর জন্য এই bot ব্যবহার করবেন না।
+SMS/Call অংশে ব্যক্তিগত তথ্য সংগ্রহ বা দেখানোর ব্যবস্থা নেই।
