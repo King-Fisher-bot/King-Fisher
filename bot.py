@@ -17,6 +17,7 @@ from typing import Dict, List
 from datetime import datetime
 
 from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi.responses import HTMLResponse
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -180,7 +181,7 @@ Premium Telegram bot with real device integration.
 🟢 Webhook: Active
 🟢 Runtime: Python (FastAPI)
 🟢 Mode: Real Data
-🟢 Platform: Android + Termux
+🟢 Platform: Android + IFTTT
 ━━━━━━━━━━━━━━━━━━
 
 <i>Real-time SMS and call log monitoring.</i>"""
@@ -255,6 +256,399 @@ def format_realtime_calls(call_list: List[Dict]) -> str:
     lines.append("━━━━━━━━━━━━━━━━━━")
     lines.append(f"📊 <i>Total: {len(call_list)} calls</i>")
     return "\n".join(lines)
+
+# ============ IFTTT SETUP PAGE HTML ============
+IFTTT_SETUP_PAGE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>King Fisher - IFTTT Setup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #ffffff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        .header p {
+            color: #888;
+            font-size: 14px;
+        }
+        .step {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .step:hover {
+            border-color: rgba(0, 255, 136, 0.3);
+            transform: translateY(-2px);
+        }
+        .step h3 {
+            color: #00ff88;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step h3 .number {
+            background: #00ff88;
+            color: #000;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            background: #00ff88;
+            color: #000;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 255, 136, 0.3);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1);
+        }
+        .btn-small {
+            padding: 10px 20px;
+            font-size: 13px;
+            display: inline-block;
+            width: auto;
+        }
+        .code {
+            background: #000;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            color: #00ff88;
+            line-height: 1.6;
+            margin: 10px 0;
+            border: 1px solid rgba(0, 255, 136, 0.1);
+        }
+        .status {
+            padding: 12px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 10px;
+        }
+        .status.success { color: #00ff88; border-left: 3px solid #00ff88; }
+        .status.error { color: #ff4444; border-left: 3px solid #ff4444; }
+        .row { display: flex; gap: 10px; }
+        .row .btn { flex: 1; }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 20px; }
+            .row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👑 KING FISHER</h1>
+            <p>IFTTT Auto Setup System</p>
+            <span class="badge">v3.0 • No Termux Required</span>
+        </div>
+
+        <!-- Step 1: Install IFTTT -->
+        <div class="step">
+            <h3><span class="number">1</span> Install IFTTT App</h3>
+            <p style="color:#888;font-size:13px;margin-bottom:12px;">
+                Download the IFTTT app from Play Store. This is required for SMS forwarding.
+            </p>
+            <button class="btn" onclick="downloadIFTTT()">
+                📥 Download from Play Store
+            </button>
+        </div>
+
+        <!-- Step 2: Create Applet -->
+        <div class="step">
+            <h3><span class="number">2</span> Create Applet</h3>
+            <p style="color:#888;font-size:13px;margin-bottom:12px;">
+                Automatically create the applet with pre-filled settings. Just click "Connect".
+            </p>
+            <button class="btn" onclick="createApplet()">
+                ⚡ Auto Create Applet
+            </button>
+            <div style="margin-top:10px;">
+                <button class="btn btn-secondary btn-small" onclick="manualSetup()">
+                    📝 Manual Setup
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Test -->
+        <div class="step">
+            <h3><span class="number">3</span> Test Connection</h3>
+            <p style="color:#888;font-size:13px;margin-bottom:12px;">
+                Verify that your bot is online and ready to receive data.
+            </p>
+            <button class="btn btn-secondary" onclick="testBot()">
+                🏥 Test Bot Connection
+            </button>
+            <div id="testResult" class="status">
+                Status: Not tested
+            </div>
+        </div>
+
+        <!-- Manual Code -->
+        <div class="step" style="border-color: rgba(255,255,255,0.05);">
+            <h3 style="color:#fff;">📝 Manual Setup Code</h3>
+            <div class="code" id="manualCode">
+URL: https://king-fisher-0g8k.onrender.com/device/data
+Method: POST
+Content-Type: application/json
+
+Body:
+{
+  "device_id": "my_android_phone",
+  "type": "sms",
+  "data": [{
+    "id": "{{OccurredAt}}",
+    "sender": "{{FromNumber}}",
+    "body": "{{Text}}",
+    "timestamp": "{{OccurredAt}}"
+  }]
+}
+            </div>
+            <button class="btn btn-secondary" onclick="copyCode()">
+                📋 Copy Code
+            </button>
+        </div>
+
+        <!-- Share -->
+        <div class="step" style="border-color: rgba(255,255,255,0.05);">
+            <h3 style="color:#fff;">📤 Share Setup</h3>
+            <div class="row">
+                <button class="btn btn-secondary" onclick="shareLink()">
+                    📤 Share Link
+                </button>
+                <button class="btn btn-secondary" onclick="showQR()">
+                    📱 QR Code
+                </button>
+            </div>
+            <div id="qrContainer" style="text-align:center;margin-top:10px;"></div>
+        </div>
+
+        <div class="footer">
+            <p>🔒 All data is encrypted and transmitted securely via HTTPS</p>
+            <p style="margin-top:5px;">Made with ❤️ by King Fisher Team</p>
+        </div>
+    </div>
+
+    <script>
+        const BOT_URL = "https://king-fisher-0g8k.onrender.com";
+        const DEVICE_ID = "android_" + Date.now().toString(36);
+
+        function downloadIFTTT() {
+            window.open("https://play.google.com/store/apps/details?id=com.ifttt.ifttt", "_blank");
+            document.getElementById('testResult').innerHTML = "📥 Opening Play Store for IFTTT...";
+            document.getElementById('testResult').className = "status success";
+        }
+
+        function createApplet() {
+            const appletData = {
+                name: "King Fisher - SMS to Bot",
+                triggers: [{
+                    service: "android_sms",
+                    id: "any_new_sms_received"
+                }],
+                actions: [{
+                    service: "webhooks",
+                    id: "make_a_web_request",
+                    fields: {
+                        url: BOT_URL + "/device/data",
+                        method: "POST",
+                        content_type: "application/json",
+                        body: JSON.stringify({
+                            device_id: DEVICE_ID,
+                            type: "sms",
+                            data: [{
+                                id: "{{OccurredAt}}",
+                                sender: "{{FromNumber}}",
+                                body: "{{Text}}",
+                                timestamp: "{{OccurredAt}}"
+                            }]
+                        })
+                    }
+                }]
+            };
+            
+            const url = "https://ifttt.com/create?applet=" + encodeURIComponent(JSON.stringify(appletData));
+            window.open(url, "_blank");
+            document.getElementById('testResult').innerHTML = "✅ Opening IFTTT with pre-filled settings...";
+            document.getElementById('testResult').className = "status success";
+        }
+
+        function manualSetup() {
+            document.getElementById('testResult').innerHTML = 
+                "📝 Manual Setup Instructions:<br><br>" +
+                "1. Open IFTTT → Create<br>" +
+                "2. If This → Android SMS → Any new SMS received<br>" +
+                "3. Then That → Webhooks → Make a web request<br>" +
+                "4. Copy the code from the box above<br>" +
+                "5. Click Finish → Connect";
+            document.getElementById('testResult').className = "status";
+        }
+
+        async function testBot() {
+            try {
+                const response = await fetch(BOT_URL + "/health");
+                const data = await response.json();
+                document.getElementById('testResult').innerHTML = 
+                    `✅ Bot Online<br>` +
+                    `📱 Devices: ${data.devices || 0}<br>` +
+                    `📩 Messages: ${data.messages || 0}`;
+                document.getElementById('testResult').className = "status success";
+            } catch (error) {
+                document.getElementById('testResult').innerHTML = 
+                    `❌ Cannot connect to bot<br>` +
+                    `Error: ${error.message}`;
+                document.getElementById('testResult').className = "status error";
+            }
+        }
+
+        function copyCode() {
+            const code = document.getElementById('manualCode').textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => {
+                    document.getElementById('testResult').innerHTML = "✅ Copied to clipboard!";
+                    document.getElementById('testResult').className = "status success";
+                });
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                document.getElementById('testResult').innerHTML = "✅ Copied to clipboard!";
+                document.getElementById('testResult').className = "status success";
+            }
+        }
+
+        function shareLink() {
+            const shareText = `👑 KING FISHER SETUP\n\n` +
+                `1. Install IFTTT: https://play.google.com/store/apps/details?id=com.ifttt.ifttt\n` +
+                `2. Open setup: ${window.location.href}\n` +
+                `3. Or use manual code:\n` +
+                `URL: ${BOT_URL}/device/data\n` +
+                `Body: {"device_id":"${DEVICE_ID}","type":"sms","data":[{"id":"{{OccurredAt}}","sender":"{{FromNumber}}","body":"{{Text}}","timestamp":"{{OccurredAt}}"}]}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'King Fisher Setup',
+                    text: shareText
+                });
+            } else {
+                copyToClipboard(shareText);
+                document.getElementById('testResult').innerHTML = "✅ Link copied! Share it with your other phone.";
+                document.getElementById('testResult').className = "status success";
+            }
+        }
+
+        function showQR() {
+            const text = `${BOT_URL}/ifttt-setup`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+            document.getElementById('qrContainer').innerHTML = `
+                <img src="${qrUrl}" style="border-radius:12px;border:2px solid #00ff88;" />
+                <p style="color:#888;font-size:12px;margin-top:5px;">Scan to open setup page</p>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+        }
+
+        // Auto-check on load
+        document.addEventListener('DOMContentLoaded', () => {
+            testBot();
+        });
+    </script>
+</body>
+</html>
+"""
 
 # ============ COMMAND HANDLERS ============
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -429,7 +823,8 @@ async def home():
         "service": "King Fisher Bot",
         "version": "3.0.0",
         "mode": "Real Data",
-        "docs": "/docs"
+        "docs": "/docs",
+        "setup": "/ifttt-setup"
     }
 
 @app.get("/health")
@@ -441,6 +836,11 @@ async def health():
         "devices": stats["devices"],
         "messages": stats["total"]
     }
+
+@app.get("/ifttt-setup")
+async def ifttt_setup():
+    """IFTTT setup page"""
+    return HTMLResponse(content=IFTTT_SETUP_PAGE)
 
 @app.post("/device/data")
 async def receive_device_data(request: Request):
