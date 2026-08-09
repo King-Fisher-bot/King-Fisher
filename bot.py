@@ -1,13 +1,6 @@
 """
-King Fisher Bot - Premium Real Device Data Integration
+King Fisher Bot - Real Device Data Integration
 Telegram bot that receives and displays real SMS/Call logs from Android devices
-
-Environment Variables:
-- BOT_TOKEN: Telegram bot token from BotFather
-- PUBLIC_URL: Public URL of the bot (e.g., https://your-bot.onrender.com)
-- WEBHOOK_SECRET: Secret token for webhook security
-
-Deployment: Render, Heroku, or any FastAPI-compatible platform
 """
 
 import os
@@ -127,10 +120,9 @@ class DeviceDataManager:
             "total": sms_count + call_count
         }
 
-# ============ UI COMPONENTS (কালারফুল + অ্যানিমেটেড) ============
+# ============ UI COMPONENTS ============
 
 def main_menu():
-    """মূল মেনু — রঙিন ও অ্যানিমেটেড ইমোজি"""
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📦 সিস্টেম আইটেম", callback_data="items")],
         [
@@ -152,7 +144,6 @@ def main_menu():
     ])
 
 def items_menu():
-    """আইটেম মেনু — রঙিন"""
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("📩 এসএমএস ইনবক্স", callback_data="sms"),
@@ -164,7 +155,6 @@ def items_menu():
     ])
 
 def back_menu(target="main"):
-    """ব্যাক বাটন — নির্দিষ্ট গন্তব্যে ফিরে যাবে"""
     if target == "main":
         return InlineKeyboardMarkup([
             [InlineKeyboardButton("🔙 মূল মেনুতে ফিরুন", callback_data="back_main")]
@@ -179,7 +169,6 @@ def back_menu(target="main"):
         ])
 
 def get_offer_text():
-    """র্যান্ডম অফার বার্তা"""
     offers = [
         "🎉 <b>বিশেষ অফার!</b> প্রথম ১০ জন ব্যবহারকারী পাচ্ছেন <b>ফ্রি প্রিমিয়াম</b> অ্যাক্সেস!",
         "🔥 <b>সীমিত সময়ের অফার!</b> আজই যোগ দিন এবং পাবেন <b>৫০% ছাড়</b>!",
@@ -189,7 +178,18 @@ def get_offer_text():
     ]
     return random.choice(offers)
 
-# ============ TEXT TEMPLATES ============
+def get_greeting():
+    hour = datetime.now().hour
+    if 5 <= hour < 12:
+        return "🌅 সুপ্রভাত!"
+    elif 12 <= hour < 17:
+        return "☀️ শুভ অপরাহ্ন!"
+    elif 17 <= hour < 21:
+        return "🌇 শুভ সন্ধ্যা!"
+    else:
+        return "🌙 শুভ রাত্রি!"
+
+# ============ TEXT TEMPLATES (বক্স স্টাইল) ============
 
 OPENING = """
 ╔════════════════════════════╗
@@ -223,16 +223,35 @@ CLOSING = """
 """
 
 HELP = """
-❓ <b>কিং ফিশার — সাহায্য</b>
+╔════════════════════════════╗
+   ❓ <b>কিং ফিশার — সাহায্য</b>
+╚════════════════════════════╝
 
-📦 <b>সিস্টেম আইটেম</b> — রিয়েল এসএমএস/কল লগ দেখুন
-📱 <b>ডিভাইসসমূহ</b> — সংযুক্ত ডিভাইস দেখুন
-🔄 <b>রিস্টার্ট</b> — ইন্টারফেস রিফ্রেশ করুন
-🔒 <b>বন্ধ করুন</b> — বর্তমান ইন্টারফেস বন্ধ করুন
-📜 <b>শর্তাবলী</b> — ব্যবহারের শর্তাবলী দেখুন
-🔐 <b>গোপনীয়তা</b> — গোপনীয়তা নীতি দেখুন
-🆘 <b>সাপোর্ট</b> — সাহায্য পেতে যোগাযোগ করুন
-🎁 <b>অফার</b> — বর্তমান অফার দেখুন
+━━━━━━━━━━━━━━━━━━
+📦 <b>সিস্টেম আইটেম</b>
+রিয়েল এসএমএস/কল লগ দেখুন
+
+📱 <b>ডিভাইসসমূহ</b>
+সংযুক্ত ডিভাইস দেখুন
+
+🔄 <b>রিস্টার্ট</b>
+ইন্টারফেস রিফ্রেশ করুন
+
+🔒 <b>বন্ধ করুন</b>
+বর্তমান ইন্টারফেস বন্ধ করুন
+
+📜 <b>শর্তাবলী</b>
+ব্যবহারের শর্তাবলী দেখুন
+
+🔐 <b>গোপনীয়তা</b>
+গোপনীয়তা নীতি দেখুন
+
+🆘 <b>সাপোর্ট</b>
+সাহায্য পেতে যোগাযোগ করুন
+
+🎁 <b>অফার</b>
+বর্তমান অফার দেখুন
+━━━━━━━━━━━━━━━━━━
 
 📌 <b>দ্রুত কমান্ড:</b>
 /start — বট চালু করুন
@@ -243,11 +262,13 @@ HELP = """
 /support — সাপোর্ট
 /offer — অফার
 
-<i>ডেটা আপনার অ্যান্ড্রয়েড ডিভাইস থেকে রিয়েল-টাইমে সংগ্রহ করা হয়।</i>
+<i>ডেটা আপনার অ্যান্ড্রয়েড ডিভাইস থেকে সংগ্রহ করা হয়।</i>
 """
 
 ABOUT = """
-ℹ️ <b>কিং ফিশার সম্পর্কে</b>
+╔════════════════════════════╗
+   ℹ️ <b>কিং ফিশার সম্পর্কে</b>
+╚════════════════════════════╝
 
 👑 <b>কিং ফিশার বট</b>
 রিয়েল ডিভাইস ইন্টিগ্রেশন সহ প্রিমিয়াম টেলিগ্রাম বট।
@@ -256,7 +277,7 @@ ABOUT = """
 🟢 ওয়েবহুক: সক্রিয়
 🟢 রানটাইম: পাইথন (FastAPI)
 🟢 মোড: রিয়েল ডেটা
-🟢 প্ল্যাটফর্ম: অ্যান্ড্রয়েড + IFTTT
+🟢 প্ল্যাটফর্ম: অ্যান্ড্রয়েড
 ━━━━━━━━━━━━━━━━━━
 
 🔹 <b>বৈশিষ্ট্য:</b>
@@ -269,7 +290,9 @@ ABOUT = """
 """
 
 TERMS = """
-📜 <b>শর্তাবলী</b>
+╔════════════════════════════╗
+   📜 <b>শর্তাবলী</b>
+╚════════════════════════════╝
 
 1. এই বট শুধুমাত্র ব্যক্তিগত ব্যবহারের জন্য।
 2. ডেটা সুরক্ষিতভাবে সংরক্ষণ করা হয়।
@@ -281,7 +304,9 @@ TERMS = """
 """
 
 PRIVACY = """
-🔐 <b>গোপনীয়তা নীতি</b>
+╔════════════════════════════╗
+   🔐 <b>গোপনীয়তা নীতি</b>
+╚════════════════════════════╝
 
 • আপনার SMS এবং কল লগ শুধুমাত্র আপনার কাছেই দেখা যায়।
 • ডেটা তৃতীয় পক্ষের সাথে শেয়ার করা হয় না।
@@ -292,7 +317,9 @@ PRIVACY = """
 """
 
 SUPPORT = """
-🆘 <b>সাপোর্ট</b>
+╔════════════════════════════╗
+   🆘 <b>সাপোর্ট</b>
+╚════════════════════════════╝
 
 আপনার কোনো প্রশ্ন বা সমস্যা থাকলে যোগাযোগ করুন:
 
@@ -305,7 +332,9 @@ SUPPORT = """
 """
 
 OFFER = f"""
-🎁 <b>বিশেষ অফার!</b>
+╔════════════════════════════╗
+   🎁 <b>বিশেষ অফার!</b>
+╚════════════════════════════╝
 
 {get_offer_text()}
 
@@ -319,18 +348,6 @@ OFFER = f"""
 """
 
 # ============ FORMATTERS ============
-
-def get_greeting():
-    """সময় অনুযায়ী শুভেচ্ছা বার্তা"""
-    hour = datetime.now().hour
-    if 5 <= hour < 12:
-        return "🌅 সুপ্রভাত!"
-    elif 12 <= hour < 17:
-        return "☀️ শুভ অপরাহ্ন!"
-    elif 17 <= hour < 21:
-        return "🌇 শুভ সন্ধ্যা!"
-    else:
-        return "🌙 শুভ রাত্রি!"
 
 def format_realtime_sms(sms_list: List[Dict]) -> str:
     if not sms_list:
@@ -391,7 +408,7 @@ def format_status(stats: Dict, devices: List[Dict]) -> str:
             sms_count = len(DEVICE_DATA["sms"].get(dev['id'], []))
             call_count = len(DEVICE_DATA["calls"].get(dev['id'], []))
             device_lines.append(f"      📩 {sms_count} SMS • 📞 {call_count} Calls")
-    return f"""<b>📊 সিস্টেম স্ট্যাটাস</b>
+    return f"""📊 <b>সিস্টেম স্ট্যাটাস</b>
 
 ━━━━━━━━━━━━━━━━━━
 🟢 <b>বট:</b> অনলাইন
@@ -437,7 +454,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "<b>🔄 সিস্টেম রিস্টার্ট হয়েছে</b>\n\n"
+        "🔄 <b>সিস্টেম রিস্টার্ট হয়েছে</b>\n\n"
         "━━━━━━━━━━━━━━━━━━\n"
         "🟢 ইন্টারফেস রিফ্রেশ করা হয়েছে\n"
         "🟢 সার্ভিস প্রস্তুত\n"
@@ -521,7 +538,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if d == "items":
         await q.edit_message_text(
-            "<b>📦 সিস্টেম আইটেম</b>\n\n<i>একটি বিভাগ নির্বাচন করুন:</i>",
+            "📦 <b>সিস্টেম আইটেম</b>\n\n<i>একটি বিভাগ নির্বাচন করুন:</i>",
             parse_mode=ParseMode.HTML,
             reply_markup=items_menu(),
         )
@@ -557,7 +574,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     elif d == "restart":
         await q.edit_message_text(
-            "<b>🔄 সিস্টেম রিস্টার্ট হয়েছে</b>\n\n"
+            "🔄 <b>সিস্টেম রিস্টার্ট হয়েছে</b>\n\n"
             "━━━━━━━━━━━━━━━━━━\n"
             "🟢 ইন্টারফেস রিফ্রেশ করা হয়েছে\n"
             "🟢 সার্ভিস প্রস্তুত\n"
@@ -603,7 +620,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     elif d == "back_items":
         await q.edit_message_text(
-            "<b>📦 সিস্টেম আইটেম</b>\n\n<i>একটি বিভাগ নির্বাচন করুন:</i>",
+            "📦 <b>সিস্টেম আইটেম</b>\n\n<i>একটি বিভাগ নির্বাচন করুন:</i>",
             parse_mode=ParseMode.HTML,
             reply_markup=items_menu(),
         )
