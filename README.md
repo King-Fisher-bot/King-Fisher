@@ -1,30 +1,20 @@
 # King Fisher Bot - Real Device Data Integration
 
-## Features
-- Real-time SMS monitoring from Android devices
-- Real-time Call log monitoring from Android devices
-- Secure webhook-based communication
-- Telegram bot interface
-- Multi-device support
+[![GitHub Repository](https://img.shields.io/badge/GitHub-King--Fisher--bot-blue?style=flat&logo=github)](https://github.com/King-Fisher-bot/King-Fisher)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-## Architecture
-1. **Android Device**: Runs `android_sender.py` via Termux
-2. **Telegram Bot**: FastAPI server with webhook
-3. **Communication**: HTTPS with secret token authentication
+## 📌 Overview
 
-## Setup
+**King Fisher Bot** is a real-time SMS and Call log monitoring system that integrates Android devices with a Telegram bot. It allows you to receive and view SMS messages and call logs from your Android device directly through Telegram.
 
-### 1. Telegram Bot
-1. Create bot via @BotFather
-2. Set environment variables:
-   - `BOT_TOKEN`: Your bot token
-   - `PUBLIC_URL`: Your Render/Heroku URL
-   - `WEBHOOK_SECRET`: Random secret string
+## ✨ Features
 
-### 2. Android Device
-1. Install Termux (F-Droid version)
-2. Install required packages:
-   ```bash
-   pkg update && pkg upgrade
-   pkg install python termux-api termux-tools
-   pip install requests
+- 📱 **Real-time SMS monitoring** from Android devices
+- 📞 **Real-time Call log monitoring** from Android devices
+- 🔐 **Secure webhook-based communication** with secret token authentication
+- 🤖 **Telegram bot interface** with inline keyboard navigation
+- 📊 **Multi-device support** - monitor multiple Android devices
+- 📈 **Real-time status dashboard** in Telegram
+
+## 🏗️ Architecture
